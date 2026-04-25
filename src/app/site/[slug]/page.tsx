@@ -1,16 +1,20 @@
-// apps/web/src/app/site/[slug]/page.tsx
 // Renders the public one-page site for a tenant.
 // This is a Server Component -- fetches via service-role and SSRs HTML.
 // Mobile-friendly via Tailwind. Customers' edits show up on next request.
+//
+// Two ways this page gets resolved:
+//   1. Hostname rewrite by middleware (acme.yourdomain.com -> /site/acme)
+//   2. Direct path access (/site/acme) -- used on previews like Railway
+//      where wildcard subdomains aren't available.
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { loadSiteByHost } from '@/lib/tenant';
+import { loadSiteByHost, loadSiteBySlug } from '@/lib/tenant';
 
 export const revalidate = 30; // ISR: re-fetch at most every 30s
 
-export default async function PublicSite() {
+export default async function PublicSite({ params }: { params: { slug: string } }) {
   const host = headers().get('host') || '';
-  const data = await loadSiteByHost(host);
+  const data = (await loadSiteByHost(host)) || (await loadSiteBySlug(params.slug));
   if (!data) notFound();
 
   const { tenant, content } = data;
@@ -144,9 +148,9 @@ export default async function PublicSite() {
 }
 
 // SEO
-export async function generateMetadata() {
+export async function generateMetadata({ params }: { params: { slug: string } }) {
   const host = headers().get('host') || '';
-  const data = await loadSiteByHost(host);
+  const data = (await loadSiteByHost(host)) || (await loadSiteBySlug(params.slug));
   if (!data) return {};
   const { tenant, content } = data;
   return {

@@ -1,5 +1,5 @@
-// Resolve "which tenant is this request for?" from the incoming hostname.
-// Used by both middleware and server components.
+// Resolve "which tenant is this request for?" from the incoming hostname,
+// or fall back to a slug param when running on a single-host preview (e.g. Railway).
 import { supabasePublic } from './supabase-server';
 
 const ROOT = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'yourdomain.com';
@@ -39,13 +39,17 @@ export function resolveHost(host: string): TenantContext {
 export async function loadSiteByHost(host: string) {
   const ctx = resolveHost(host);
   if (ctx.kind !== 'site') return null;
-  if (!HOST_RE.test(ctx.slug)) return null;
+  return loadSiteBySlug(ctx.slug);
+}
+
+export async function loadSiteBySlug(slug: string) {
+  if (!HOST_RE.test(slug)) return null;
 
   const sb = supabasePublic();
   const { data: tenant } = await sb
     .from('tenants')
     .select('*')
-    .or(`slug.eq.${ctx.slug},custom_domain.eq.${ctx.slug}`)
+    .or(`slug.eq.${slug},custom_domain.eq.${slug}`)
     .eq('status', 'active')
     .maybeSingle();
 
