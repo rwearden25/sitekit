@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-const MAILTO = 'mailto:ross.wearden@gmail.com?subject=I%20want%20a%20SiteKit%20site';
+const MAILTO = 'mailto:info@rockstandard.ai?subject=I%20want%20a%20SiteKit%20site';
 
 const BUSINESSES = [
   'restaurants',
@@ -176,8 +176,8 @@ export default function Home() {
             </a>
             <p className="mt-6 text-xs text-stone-500">
               Or email{' '}
-              <a href="mailto:ross.wearden@gmail.com" className="underline underline-offset-4 hover:text-stone-800">
-                ross.wearden@gmail.com
+              <a href="mailto:info@rockstandard.ai" className="underline underline-offset-4 hover:text-stone-800">
+                info@rockstandard.ai
               </a>
             </p>
           </div>
