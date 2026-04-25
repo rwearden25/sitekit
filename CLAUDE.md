@@ -48,6 +48,19 @@ npm run login-link -- <email>                            # generate a magic link
 - Server actions revalidate both `/portal` and `/site/<slug>` on save so changes appear immediately
 - Image uploads go to `site-media` bucket under `<tenant-id>/<timestamp>-<filename>` paths; storage RLS gates writes by membership in `tenant_members`
 
+## UX conventions for the portal
+
+The customer is a non-technical small-business owner — restaurant manager, cleaning crew owner, etc. Treat every screen as if it's the first one they've ever used.
+
+- **Every Section gets a one-line description** under its title saying what it controls
+- **Every field gets help text** when the label alone could be ambiguous — explain what it does, where it shows up on the public site, with concrete examples
+- **Empty states are instructive, not just empty** — tell them what to do next, not just "no items"
+- **Success messages name the next action** — "Saved. Your changes are live." with a "View live site ↗" link, not just "Saved."
+- **Destructive actions live in a collapsed Danger Zone** — never put a Reset / Delete primary button next to Save
+- **Helper components** (`Field`, `Textarea`, `ColorField`, `ImageField` in `editor.tsx`) all accept a `help` prop. Use it.
+- **Friendly copy over technical accuracy** — "Couldn't delete: …" not "Error: failed to remove storage_path"
+- **`'use client'` boundaries** — keep server-data fetching in `page.tsx`, hand the client component everything it needs as props (don't re-fetch from the browser unless interactive)
+
 ## Gotchas
 
 - Supabase free tier: **4 emails/hour**. Use `npm run login-link` instead of relying on the email flow during dev
