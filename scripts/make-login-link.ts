@@ -15,15 +15,19 @@ if (!URL || !SERVICE) {
 
 async function main() {
   const email = process.argv[2];
+  const appUrlOverride = process.argv[3];
   if (!email) {
-    console.error('Usage: npm run login-link -- <email>');
+    console.error('Usage: npm run login-link -- <email> [app-url-override]');
+    console.error('  app-url-override is useful when generating links for a deployed env, e.g.:');
+    console.error('    npm run login-link -- you@example.com https://sitekit-production.up.railway.app');
     process.exit(1);
   }
+  const targetAppUrl = appUrlOverride || APP_URL;
   const sb = createClient(URL!, SERVICE!, { auth: { persistSession: false } });
   const { data, error } = await sb.auth.admin.generateLink({
     type: 'magiclink',
     email,
-    options: { redirectTo: `${APP_URL}/portal/auth/callback` },
+    options: { redirectTo: `${targetAppUrl}/portal/auth/callback` },
   });
   if (error) {
     console.error('Error:', error.message);

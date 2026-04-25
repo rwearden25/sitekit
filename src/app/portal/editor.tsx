@@ -92,7 +92,13 @@ export function Editor({ content, media }: { content: any; media: MediaItem[] })
       <Section title="Hero">
         <Field label="Headline" value={form.hero_headline ?? ''} onChange={(v) => set('hero_headline', v)} placeholder="Your big promise" />
         <Field label="Subheadline" value={form.hero_subheadline ?? ''} onChange={(v) => set('hero_subheadline', v)} placeholder="One sentence describing what you do" />
-        <ImageField label="Hero background image" value={form.hero_image_url ?? ''} onChange={(v) => set('hero_image_url', v)} media={media} />
+        <ImageField
+          label="Hero background image"
+          help="Big photo behind the headline at the top of your site. Best at landscape (wider than tall)."
+          value={form.hero_image_url ?? ''}
+          onChange={(v) => set('hero_image_url', v)}
+          media={media}
+        />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Button label" value={form.hero_cta_label ?? ''} onChange={(v) => set('hero_cta_label', v)} placeholder="Get a Quote" />
           <Field label="Button link" value={form.hero_cta_link ?? ''} onChange={(v) => set('hero_cta_link', v)} placeholder="tel:5551234567 or https://..." />
@@ -116,7 +122,13 @@ export function Editor({ content, media }: { content: any; media: MediaItem[] })
               <div className="space-y-2">
                 <Field label="Title" value={s.title} onChange={(v) => setService(i, { title: v })} placeholder="Pressure Washing" />
                 <Textarea label="Description" value={s.description ?? ''} onChange={(v) => setService(i, { description: v })} rows={2} />
-                <ImageField label="Image" value={s.image_url ?? ''} onChange={(v) => setService(i, { image_url: v })} media={media} />
+                <ImageField
+                  label="Image"
+                  help="Shows on the service card on your site. Square or landscape works best."
+                  value={s.image_url ?? ''}
+                  onChange={(v) => setService(i, { image_url: v })}
+                  media={media}
+                />
               </div>
             </div>
           ))}
@@ -156,7 +168,13 @@ export function Editor({ content, media }: { content: any; media: MediaItem[] })
           <ColorField label="Primary color" value={form.brand_primary ?? ''} onChange={(v) => set('brand_primary', v)} />
           <ColorField label="Accent color" value={form.brand_accent ?? ''} onChange={(v) => set('brand_accent', v)} />
         </div>
-        <ImageField label="Logo" value={form.logo_url ?? ''} onChange={(v) => set('logo_url', v)} media={media} />
+        <ImageField
+          label="Logo"
+          help="Small image at the top of your site, above the headline. Transparent PNG works best."
+          value={form.logo_url ?? ''}
+          onChange={(v) => set('logo_url', v)}
+          media={media}
+        />
       </Section>
 
       <Section title="Footer & SEO">
@@ -246,12 +264,13 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   );
 }
 
-function ImageField({ label, value, onChange, media }: { label: string; value: string; onChange: (v: string) => void; media: MediaItem[] }) {
+function ImageField({ label, help, value, onChange, media }: { label: string; help?: string; value: string; onChange: (v: string) => void; media: MediaItem[] }) {
   const [open, setOpen] = useState(false);
   return (
     <div>
       <label className="block">
         <span className="text-sm text-slate-700">{label}</span>
+        {help && <span className="block text-xs text-slate-500 mt-0.5">{help}</span>}
         <div className="mt-1 flex gap-2">
           <input
             type="text"

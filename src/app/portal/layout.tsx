@@ -60,7 +60,7 @@ export default async function PortalLayout({ children }: { children: React.React
               rel="noreferrer"
               className="text-xs text-slate-500 hover:text-slate-700 underline"
             >
-              {publicHost} ↗
+              View live site: {publicHost} ↗
             </a>
           </div>
           <nav className="flex gap-2 text-sm">
