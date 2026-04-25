@@ -18,7 +18,7 @@ const DAYS: Array<{ key: string; label: string }> = [
   { key: 'sun', label: 'Sunday' },
 ];
 
-export function Editor({ content, media }: { content: any; media: MediaItem[] }) {
+export function Editor({ content, media, publicHost }: { content: any; media: MediaItem[]; publicHost: string }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -66,22 +66,24 @@ export function Editor({ content, media }: { content: any; media: MediaItem[] })
     setForm((f) => ({ ...f, services: f.services.filter((_, idx) => idx !== i) }));
   }
 
+  const isFirstTime = !content.hero_headline && !content.about_body && (form.services?.length ?? 0) === 0;
+
   function save() {
     setMsg(null);
     start(async () => {
       const result = await saveSiteContent(form);
-      if (result.ok) setMsg({ ok: true, text: 'Saved. Your site has been updated.' });
+      if (result.ok) setMsg({ ok: true, text: 'Saved. Your changes are live.' });
       else setMsg({ ok: false, text: result.error });
     });
   }
 
   function resetAll() {
-    if (!confirm('Reset your site? This clears all content and starts fresh. Cannot be undone.')) return;
+    if (!confirm("Reset your site to a blank slate? This deletes every word and image you've added. You can't undo this.")) return;
     setMsg(null);
     start(async () => {
       const result = await resetSiteContent();
       if (result.ok) {
-        setMsg({ ok: true, text: 'Site reset. Refresh to see the empty editor.' });
+        setMsg({ ok: true, text: 'Site reset. Reloading…' });
         location.reload();
       } else setMsg({ ok: false, text: result.error });
     });
@@ -89,30 +91,49 @@ export function Editor({ content, media }: { content: any; media: MediaItem[] })
 
   return (
     <div className="space-y-6">
-      <Section title="Hero">
-        <Field label="Headline" value={form.hero_headline ?? ''} onChange={(v) => set('hero_headline', v)} placeholder="Your big promise" />
-        <Field label="Subheadline" value={form.hero_subheadline ?? ''} onChange={(v) => set('hero_subheadline', v)} placeholder="One sentence describing what you do" />
+      {isFirstTime && (
+        <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-5">
+          <div className="font-semibold text-blue-900">Welcome — let's get your site live.</div>
+          <ol className="mt-2 text-sm text-blue-900 list-decimal list-inside space-y-1">
+            <li>Fill in a <strong>Headline</strong> below — that's the big text at the top of your site.</li>
+            <li>Add at least one <strong>Service</strong> describing what you offer.</li>
+            <li>Set your <strong>Phone</strong> so customers can reach you.</li>
+            <li>Click <strong>Save changes</strong> at the bottom — that's it.</li>
+          </ol>
+          <p className="mt-2 text-xs text-blue-800">
+            Tip: upload photos in the Media tab first, then come back here and click <strong>Pick</strong> next to any image field.
+          </p>
+        </div>
+      )}
+
+      <Section title="Hero" desc="The top of your site — the first thing visitors see.">
+        <Field label="Headline" help="The big bold text. Make a promise or describe what you do." value={form.hero_headline ?? ''} onChange={(v) => set('hero_headline', v)} placeholder="Sparkling clean exteriors, every time" />
+        <Field label="Subheadline" help="One supporting sentence below the headline." value={form.hero_subheadline ?? ''} onChange={(v) => set('hero_subheadline', v)} placeholder="Pressure washing for restaurants and retail" />
         <ImageField
           label="Hero background image"
-          help="Big photo behind the headline at the top of your site. Best at landscape (wider than tall)."
+          help="Big photo behind the headline. Landscape (wider than tall) looks best."
           value={form.hero_image_url ?? ''}
           onChange={(v) => set('hero_image_url', v)}
           media={media}
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Button label" value={form.hero_cta_label ?? ''} onChange={(v) => set('hero_cta_label', v)} placeholder="Get a Quote" />
-          <Field label="Button link" value={form.hero_cta_link ?? ''} onChange={(v) => set('hero_cta_link', v)} placeholder="tel:5551234567 or https://..." />
+          <Field label="Button label" help="Text shown on the call-to-action button." value={form.hero_cta_label ?? ''} onChange={(v) => set('hero_cta_label', v)} placeholder="Get a Quote" />
+          <Field label="Button link" help='Where the button goes. Use "tel:5551234567" to call you, or any web URL.' value={form.hero_cta_link ?? ''} onChange={(v) => set('hero_cta_link', v)} placeholder="tel:5551234567" />
         </div>
       </Section>
 
-      <Section title="About">
+      <Section title="About" desc="Tell visitors who you are and why to choose you.">
         <Field label="Section title" value={form.about_title ?? ''} onChange={(v) => set('about_title', v)} placeholder="About Us" />
-        <Textarea label="Body text" value={form.about_body ?? ''} onChange={(v) => set('about_body', v)} rows={5} />
+        <Textarea label="Body text" help="A few sentences. What makes you different? How long have you been around?" value={form.about_body ?? ''} onChange={(v) => set('about_body', v)} rows={5} />
       </Section>
 
-      <Section title="Services">
-        <p className="text-sm text-slate-500">List what you offer. Each card shows on the public site.</p>
+      <Section title="Services" desc="List what you offer. Each becomes a card on your site.">
         <div className="space-y-3">
+          {form.services.length === 0 && (
+            <div className="rounded border border-dashed border-slate-300 p-4 text-sm text-slate-500 text-center">
+              No services yet. Click <strong>Add a service</strong> below.
+            </div>
+          )}
           {form.services.map((s, i) => (
             <div key={i} className="rounded border border-slate-200 p-3 bg-slate-50/40">
               <div className="flex justify-between items-start mb-2">
@@ -121,10 +142,10 @@ export function Editor({ content, media }: { content: any; media: MediaItem[] })
               </div>
               <div className="space-y-2">
                 <Field label="Title" value={s.title} onChange={(v) => setService(i, { title: v })} placeholder="Pressure Washing" />
-                <Textarea label="Description" value={s.description ?? ''} onChange={(v) => setService(i, { description: v })} rows={2} />
+                <Textarea label="Description" value={s.description ?? ''} onChange={(v) => setService(i, { description: v })} rows={2} placeholder="Two or three sentences" />
                 <ImageField
                   label="Image"
-                  help="Shows on the service card on your site. Square or landscape works best."
+                  help="Shows on the service card. Square or landscape both work."
                   value={s.image_url ?? ''}
                   onChange={(v) => setService(i, { image_url: v })}
                   media={media}
@@ -133,20 +154,20 @@ export function Editor({ content, media }: { content: any; media: MediaItem[] })
             </div>
           ))}
         </div>
-        <button type="button" onClick={addService} className="mt-3 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-50">
+        <button type="button" onClick={addService} className="mt-3 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-50 font-medium">
           + Add a service
         </button>
       </Section>
 
-      <Section title="Contact">
+      <Section title="Contact" desc="How customers reach you. Phone and email are tappable on mobile.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Phone" value={form.phone ?? ''} onChange={(v) => set('phone', v)} placeholder="555-123-4567" />
           <Field label="Email" value={form.email ?? ''} onChange={(v) => set('email', v)} placeholder="hello@business.com" />
         </div>
-        <Textarea label="Address" value={form.address ?? ''} onChange={(v) => set('address', v)} rows={2} />
+        <Textarea label="Address" help="Street, city, state. Shown on the site as plain text." value={form.address ?? ''} onChange={(v) => set('address', v)} rows={2} />
       </Section>
 
-      <Section title="Hours">
+      <Section title="Hours" desc="Leave any day blank to hide it. Type 'Closed' for days you're not open.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {DAYS.map((d) => (
             <label key={d.key} className="flex items-center gap-2">
@@ -155,7 +176,7 @@ export function Editor({ content, media }: { content: any; media: MediaItem[] })
                 type="text"
                 value={form.hours[d.key] ?? ''}
                 onChange={(e) => setHours(d.key, e.target.value)}
-                placeholder="8am - 5pm  or  Closed"
+                placeholder="8am - 5pm"
                 className="flex-1 rounded border border-slate-300 px-3 py-1.5 text-sm"
               />
             </label>
@@ -163,39 +184,59 @@ export function Editor({ content, media }: { content: any; media: MediaItem[] })
         </div>
       </Section>
 
-      <Section title="Branding">
+      <Section title="Branding" desc="Your colors and logo set the look of the whole site.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <ColorField label="Primary color" value={form.brand_primary ?? ''} onChange={(v) => set('brand_primary', v)} />
-          <ColorField label="Accent color" value={form.brand_accent ?? ''} onChange={(v) => set('brand_accent', v)} />
+          <ColorField label="Primary color" help="Main background — used for hero and accents." value={form.brand_primary ?? ''} onChange={(v) => set('brand_primary', v)} />
+          <ColorField label="Accent color" help="Used for buttons and links." value={form.brand_accent ?? ''} onChange={(v) => set('brand_accent', v)} />
         </div>
         <ImageField
           label="Logo"
-          help="Small image at the top of your site, above the headline. Transparent PNG works best."
+          help="Small image at the very top, above the headline. Transparent PNG works best."
           value={form.logo_url ?? ''}
           onChange={(v) => set('logo_url', v)}
           media={media}
         />
       </Section>
 
-      <Section title="Footer & SEO">
-        <Field label="Footer text" value={form.footer_text ?? ''} onChange={(v) => set('footer_text', v)} placeholder="© 2026 Your Business. All rights reserved." />
-        <Field label="Page title (browser tab + Google)" value={form.seo_title ?? ''} onChange={(v) => set('seo_title', v)} />
-        <Textarea label="Page description (Google preview)" value={form.seo_description ?? ''} onChange={(v) => set('seo_description', v)} rows={2} />
+      <Section title="Footer & SEO" desc="Bottom-of-page text and how your site shows in Google.">
+        <Field label="Footer text" help="Shows in small text at the very bottom of the page." value={form.footer_text ?? ''} onChange={(v) => set('footer_text', v)} placeholder="© 2026 Your Business. All rights reserved." />
+        <Field label="Page title" help="What appears in the browser tab and as the headline of your Google search result." value={form.seo_title ?? ''} onChange={(v) => set('seo_title', v)} placeholder="Acme Cleaning — Pressure Washing in Dallas" />
+        <Textarea label="Page description" help="The 1-2 sentence preview Google shows under your link." value={form.seo_description ?? ''} onChange={(v) => set('seo_description', v)} rows={2} placeholder="Family-owned commercial pressure washing serving the Dallas metro since 2018." />
       </Section>
 
       {msg && (
-        <div className={`rounded-md px-4 py-3 text-sm ${msg.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
-          {msg.text}
+        <div className={`rounded-md px-4 py-3 text-sm flex flex-wrap items-center gap-3 ${msg.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+          <span>{msg.text}</span>
+          {msg.ok && publicHost && (
+            <a
+              href={`https://${publicHost}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-green-900 underline font-medium"
+            >
+              View live site ↗
+            </a>
+          )}
         </div>
       )}
 
-      <div className="flex flex-wrap gap-3 items-center sticky bottom-0 bg-slate-50 py-3">
-        <button onClick={save} disabled={pending} className="rounded-md bg-slate-900 px-5 py-2.5 text-white font-medium disabled:opacity-50">
+      <div className="flex flex-wrap gap-3 items-center sticky bottom-0 bg-slate-50 py-3 border-t border-slate-200">
+        <button onClick={save} disabled={pending} className="rounded-md bg-slate-900 px-5 py-2.5 text-white font-semibold disabled:opacity-50">
           {pending ? 'Saving…' : 'Save changes'}
         </button>
-        <button onClick={resetAll} disabled={pending} className="rounded-md border border-red-300 text-red-700 px-4 py-2.5 text-sm hover:bg-red-50 disabled:opacity-50">
-          Reset site
-        </button>
+        <details className="ml-auto">
+          <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-700 px-2 py-1">
+            Danger zone
+          </summary>
+          <div className="mt-2 rounded border border-red-200 bg-red-50 p-3 max-w-xs">
+            <div className="text-xs text-red-900 mb-2">
+              Wipes all your content back to a blank slate. Cannot be undone.
+            </div>
+            <button onClick={resetAll} disabled={pending} className="rounded-md border border-red-300 bg-white text-red-700 px-3 py-1.5 text-xs font-medium hover:bg-red-100 disabled:opacity-50">
+              Reset site
+            </button>
+          </div>
+        </details>
       </div>
     </div>
   );
@@ -203,19 +244,21 @@ export function Editor({ content, media }: { content: any; media: MediaItem[] })
 
 // -- field components --
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
   return (
     <fieldset className="rounded-lg border bg-white p-5">
       <legend className="px-2 font-semibold">{title}</legend>
+      {desc && <p className="text-sm text-slate-500 -mt-1 mb-2">{desc}</p>}
       <div className="space-y-3">{children}</div>
     </fieldset>
   );
 }
 
-function Field({ label, value, onChange, placeholder }: { label?: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+function Field({ label, help, value, onChange, placeholder }: { label?: string; help?: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <label className="block">
       {label && <span className="text-sm text-slate-700">{label}</span>}
+      {help && <span className="block text-xs text-slate-500 mt-0.5">{help}</span>}
       <input
         type="text"
         value={value}
@@ -227,24 +270,27 @@ function Field({ label, value, onChange, placeholder }: { label?: string; value:
   );
 }
 
-function Textarea({ label, value, onChange, rows = 3 }: { label?: string; value: string; onChange: (v: string) => void; rows?: number }) {
+function Textarea({ label, help, value, onChange, rows = 3, placeholder }: { label?: string; help?: string; value: string; onChange: (v: string) => void; rows?: number; placeholder?: string }) {
   return (
     <label className="block">
       {label && <span className="text-sm text-slate-700">{label}</span>}
+      {help && <span className="block text-xs text-slate-500 mt-0.5">{help}</span>}
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
+        placeholder={placeholder}
         className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
       />
     </label>
   );
 }
 
-function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function ColorField({ label, help, value, onChange }: { label: string; help?: string; value: string; onChange: (v: string) => void }) {
   return (
     <label className="block">
       <span className="text-sm text-slate-700">{label}</span>
+      {help && <span className="block text-xs text-slate-500 mt-0.5">{help}</span>}
       <div className="mt-1 flex gap-2">
         <input
           type="color"

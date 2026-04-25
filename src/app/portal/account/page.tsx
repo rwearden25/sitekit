@@ -1,6 +1,5 @@
-// apps/web/src/app/portal/account/page.tsx
-// Customer self-serve: change password, see their email.
 'use client';
+// Account page: see your email, set or change a password, request a reset.
 import { useEffect, useState } from 'react';
 import { supabaseBrowser } from '@/lib/supabase';
 
@@ -8,7 +7,8 @@ export default function AccountPage() {
   const sb = supabaseBrowser();
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
-  const [msg, setMsg] = useState('');
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     sb.auth.getUser().then(({ data }) => setEmail(data.user?.email || ''));
@@ -16,52 +16,76 @@ export default function AccountPage() {
 
   async function changePassword(e: React.FormEvent) {
     e.preventDefault();
-    setMsg('');
+    setMsg(null);
+    setBusy(true);
     const { error } = await sb.auth.updateUser({ password: pw });
-    setMsg(error ? `Error: ${error.message}` : 'Password updated.');
-    if (!error) setPw('');
+    setBusy(false);
+    if (error) setMsg({ ok: false, text: error.message });
+    else { setMsg({ ok: true, text: 'Password updated. You can now sign in with it next time.' }); setPw(''); }
   }
 
   async function emailReset() {
-    setMsg('');
+    setMsg(null);
+    setBusy(true);
     const { error } = await sb.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/portal/account`,
     });
-    setMsg(error ? `Error: ${error.message}` : 'Reset email sent.');
+    setBusy(false);
+    if (error) setMsg({ ok: false, text: error.message });
+    else setMsg({ ok: true, text: 'Reset email sent. Check your inbox in a minute.' });
   }
 
   return (
     <div className="space-y-6 max-w-md">
       <div className="rounded-lg border bg-white p-5">
-        <div className="text-sm text-slate-500">Signed in as</div>
-        <div className="font-medium">{email}</div>
+        <h2 className="font-semibold">Your account</h2>
+        <div className="mt-3 text-sm text-slate-500">Signed in as</div>
+        <div className="font-medium">{email || '…'}</div>
       </div>
 
       <form onSubmit={changePassword} className="rounded-lg border bg-white p-5 space-y-3">
-        <h2 className="font-semibold">Change password</h2>
+        <div>
+          <h2 className="font-semibold">Set or change password</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            You signed in with a one-time link. Setting a password lets you sign in with email + password too.
+          </p>
+        </div>
         <input
           type="password"
           required
           minLength={8}
-          placeholder="New password (min 8 chars)"
+          placeholder="New password (min 8 characters)"
           value={pw}
           onChange={(e) => setPw(e.target.value)}
           className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
         />
-        <button className="rounded bg-slate-900 text-white px-4 py-2 text-sm font-medium">
-          Update
+        <button
+          disabled={busy || pw.length < 8}
+          className="rounded-md bg-slate-900 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50"
+        >
+          {busy ? 'Updating…' : 'Update password'}
         </button>
       </form>
 
       <div className="rounded-lg border bg-white p-5">
-        <h2 className="font-semibold mb-2">Forgot it?</h2>
-        <p className="text-sm text-slate-600 mb-3">Email yourself a reset link.</p>
-        <button onClick={emailReset} className="rounded border px-4 py-2 text-sm">
-          Send reset email
+        <h2 className="font-semibold">Trouble signing in?</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          We'll email you a fresh sign-in link. Use this if you get locked out or forget your password.
+        </p>
+        <button
+          onClick={emailReset}
+          disabled={busy || !email}
+          className="mt-3 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-50 disabled:opacity-50"
+        >
+          Email me a new sign-in link
         </button>
       </div>
 
-      {msg && <div className="text-sm text-slate-700">{msg}</div>}
+      {msg && (
+        <div className={`rounded-md px-4 py-3 text-sm ${msg.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+          {msg.text}
+        </div>
+      )}
     </div>
   );
 }

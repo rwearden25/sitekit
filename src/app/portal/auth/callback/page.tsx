@@ -9,12 +9,12 @@ import { supabaseBrowser } from '@/lib/supabase';
 
 export default function AuthCallback() {
   const router = useRouter();
-  const [msg, setMsg] = useState('Signing you in…');
+  const [state, setState] = useState<'pending' | 'error'>('pending');
+  const [errMsg, setErrMsg] = useState('');
 
   useEffect(() => {
     const sb = supabaseBrowser();
     (async () => {
-      // If Supabase put tokens in the hash, parse and store them.
       const hash = window.location.hash.startsWith('#')
         ? window.location.hash.slice(1)
         : '';
@@ -25,26 +25,40 @@ export default function AuthCallback() {
       if (access_token && refresh_token) {
         const { error } = await sb.auth.setSession({ access_token, refresh_token });
         if (error) {
-          setMsg(`Sign-in failed: ${error.message}`);
+          setErrMsg(error.message);
+          setState('error');
           return;
         }
       }
 
-      // Confirm session exists, then go to the editor.
       const { data } = await sb.auth.getSession();
       if (data.session) {
         router.replace('/portal');
         router.refresh();
       } else {
-        setMsg('No session found. Please request a new sign-in link.');
-        setTimeout(() => router.replace('/portal/login'), 2500);
+        setErrMsg("That link isn't valid anymore. Please request a new one.");
+        setState('error');
+        setTimeout(() => router.replace('/portal/login'), 3000);
       }
     })();
   }, [router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="text-slate-700">{msg}</div>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="text-center">
+        {state === 'pending' ? (
+          <>
+            <div className="text-lg font-semibold text-slate-900">Signing you in…</div>
+            <div className="mt-1 text-sm text-slate-500">One moment.</div>
+          </>
+        ) : (
+          <>
+            <div className="text-lg font-semibold text-red-700">Sign-in failed</div>
+            <div className="mt-1 text-sm text-slate-600">{errMsg}</div>
+            <div className="mt-3 text-xs text-slate-500">Sending you back to the sign-in page…</div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
